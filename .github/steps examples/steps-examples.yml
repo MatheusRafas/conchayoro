@@ -1,15 +1,13 @@
+name: marketplace
+on:
+  push
 jobs:
-  build:
+  jobx:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        node: [ 14, 16, 18 ]
-    name: Node ${{ matrix.node }} sample
     steps:
-      - uses: actions/checkout@v4
-      - name: Setup node
-        uses: actions/setup-node@v4
+      - name:  Node ${{ matrix.node }} sample
+        uses: actions/checkout@v4
         with:
-          node-version: ${{ matrix.node }}
-      - run: npm ci
-      - run: npm test
+          node-version: 14
+      - name: verification of node version
+          run: node --version
