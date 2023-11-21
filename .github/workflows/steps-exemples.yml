@@ -1,0 +1,13 @@
+name: steps examples
+on:
+  push
+jobs:
+  jobx:
+    runs-on: ubuntu-latest
+    steps:
+      - name:  Node ${{ matrix.node }} sample
+        uses: actions/setup-node@v4
+        with:
+          node-version: 14
+      - name: verification of node version
+          run: node --version
