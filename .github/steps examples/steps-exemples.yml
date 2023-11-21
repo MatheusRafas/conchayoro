@@ -1,0 +1,7 @@
+jobx:
+  runs-on: ubuntu-latest
+  steps:
+    - name: Node ${{ matrix.node }} sample
+      uses: actions/setup-node@v4
+    - name: verification of node version
+      run: node --version
