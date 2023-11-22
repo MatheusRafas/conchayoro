@@ -12,27 +12,37 @@ jobs:
     with:
      node-version: '18'
      cache: 'npm'
-  - name: frontend install
-    run: npm --prefix frontend install
-  - name: frontend build
-    run: npm --prefix frontend run build
-  - name: upload frontend build
-    uses: actions/upload-artifact@v3
-    with:
-     name: build
-     path: frontend/.next/server/app
- deploy:
+  - name: Build and Test
+    run: npm install
+  - name: build
+    run: npm run build
+ deploy_homologation:
   runs-on: ubuntu-latest
   needs: build
-  env:
-   AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-   AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-   AWS_SESSION_TOKEN: ${{ secrets.AWS_SESSION_TOKEN }}
-   AWS_EC2_METADATA_DISABLED: true
-   BUCKET_S3: ${{ vars.BUCKET_S3 }}
   steps:
   - uses: actions/download-artifact@v3
     with:
-     name: build
-     path: frontend/.next/server/app
+     AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+     AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+     AWS_SESSION_TOKEN: ${{ secrets.AWS_SESSION_TOKEN }}
+     AWS_EC2_METADATA_DISABLED: true
+     BUCKET_S3: ${{ vars.BUCKET_S3 }}
+  - name: Upload to Homologacao Bucket
   - run: aws s3 cp frontend/.next/server/app s3://$BUCKET_S3 --recursive --acl public-read
+ deploy_producao:
+    needs: build
+    runs-on: ubuntu-latest
+
+    if: contains(github.event.head_commit.message, 'texto-especifico-no-commit')
+
+    steps:
+    - name: Manual Deploy to Producao
+      uses: wei/github-actions-deploy-digitalocean@v1
+      with:
+       token: ${{ secrets.DIGITALOCEAN_API_TOKEN }}
+ deploy_producao_manual:
+     needs: deploy_producao
+     runs-on: ubuntu-latest
+     steps:
+     - name: Manual Approval
+       uses: wei/github-actions-approval@v1
