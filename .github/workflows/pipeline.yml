@@ -1,48 +1,37 @@
-name: conchayoro-pipeline
+name: conchayoro-pipeline-ecr-ebs
+
 on:
- push:
-    branches: [ "main" ]
+  push:
+    branches: [ main ]
+
+env:
+  AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+  AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+  AWS_SESSION_TOKEN: ${{ secrets.AWS_SESSION_TOKEN }}
+  AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
+  AWS_REGION: ${{ vars.AWS_REGION }}
+  PROJECT_NAME: ${{ vars.PROJECT_NAME }}
+  MODULE_NAME: ${{ vars.MODULE_NAME }}
+  TAG: latest
+  STACK_NAME: "64bit Amazon Linux 2 v3.5.7 running Docker"
+  
 jobs:
- build:
-  runs-on: ubuntu-latest
-  steps:
-  - uses: actions/checkout@v3
-  - name: setup node
-    uses: actions/setup-node@v3
-    with:
-     node-version: '18'
-     cache: 'npm'
-  - name: Build and Test
-    run: npm install
-  - name: build
-    run: npm run build
- deploy_homologation:
-  runs-on: ubuntu-latest
-  needs: build
-  steps:
-  - uses: actions/download-artifact@v3
-    with:
-     AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-     AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-     AWS_SESSION_TOKEN: ${{ secrets.AWS_SESSION_TOKEN }}
-     AWS_EC2_METADATA_DISABLED: true
-     BUCKET_S3: ${{ vars.BUCKET_S3 }}
-  - name: Upload to Homologacao Bucket
-  - run: aws s3 cp frontend/.next/server/app s3://$BUCKET_S3 --recursive --acl public-read
- deploy_producao:
-    needs: build
+  build:
     runs-on: ubuntu-latest
-
-    if: contains(github.event.head_commit.message, 'texto-especifico-no-commit')
-
+    env:
+      MODULE_FULLNAME: ${{ vars.PROJECT_NAME }}/${{ vars.MODULE_NAME }}
+      REGISTRY_URL: ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ vars.AWS_REGION }}.amazonaws.com
     steps:
-    - name: Manual Deploy to Producao
-      uses: wei/github-actions-deploy-digitalocean@v1
+    - uses: actions/checkout@v3
+    - uses: actions/setup-node@v3
       with:
-       token: ${{ secrets.DIGITALOCEAN_API_TOKEN }}
- deploy_producao_manual:
-     needs: deploy_producao
-     runs-on: ubuntu-latest
-     steps:
-     - name: Manual Approval
-       uses: wei/github-actions-approval@v1
+        node-version: '16'
+        cache: 'npm'
+    - run: docker build -t $MODULE_FULLNAME $MODULE_NAME
+    - run: |
+        docker tag $MODULE_FULLNAME:$TAG \
+        $REGISTRY_URL/$MODULE_FULLNAME:$TAG
+    - run: | 
+        aws ecr get-login-password --region $AWS_REGION | \
+        docker login --username AWS --password-stdin $REGISTRY_URL
+    - run: docker push $REGISTRY_URL/$MODULE_FULLNAME:$TAG
