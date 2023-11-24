@@ -1,8 +1,8 @@
 branch-defaults:
   default:
-    environment: frontend
+    environment: backend
 environment-defaults:
-  frontend:
+  backend:
     branch: null
     repository: null
 global:
