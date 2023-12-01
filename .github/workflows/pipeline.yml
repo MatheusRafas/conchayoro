@@ -84,29 +84,4 @@ jobs:
           sudo pip install "pyyaml<5.4"
           sudo pip install --upgrade setuptools
           sudo pip install --upgrade pip awsebcli
-
-          # Agora, adicionamos a aprovação manual antes do deploy
-      - name: 'Request manual approval'
-        if: github.event_name == 'workflow_dispatch'
-        uses: actions/github-script@v5
-        with:
-          script: |
-            const { data } = await github.rest.repos.createDeployment({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              ref: github.sha,
-              environment: 'production',
-              description: 'Deployment request for production',
-              required_contexts: [],
-            });
-
-            await github.rest.repos.createDeploymentStatus({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              deployment_id: data.id,
-              state: 'pending',
-              description: 'Please approve this deployment.',
-            });
-      - name: 'Wait for manual approval'
-        if: github.event_name
       - run: eb deploy --verbose
